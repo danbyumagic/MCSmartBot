@@ -4,8 +4,6 @@ import { createCapabilityPolicy } from "../../src/permissions/capabilities.js";
 import { createSkillTool } from "../../src/agent/skillTools.js";
 import { tossItem } from "../../src/skills/items/tossItem.js";
 import { createClearRegionSkill } from "../../src/skills/world/clearRegion.js";
-import { attackPlayer } from "../../src/skills/combat/attackPlayer.js";
-import { attackMob } from "../../src/skills/combat/attackMob.js";
 import { clickWindowSlot } from "../../src/skills/interaction/clickWindowSlot.js";
 import { inspectWindow } from "../../src/skills/interaction/inspectWindow.js";
 import {
@@ -96,18 +94,16 @@ describe("role-based tool authorization", () => {
     const tools = [
       authorizeTool(createSkillTool(clearRegion, runner, () => operator), operator),
       authorizeTool(createSkillTool(tossItem, runner, () => operator), operator),
-      authorizeTool(createSkillTool(attackPlayer, runner, () => operator), operator),
       authorizeTool(createSkillTool(clickWindowSlot, runner, () => operator), operator),
     ];
 
-    const [clearDenied, tossDenied, attackDenied, clickDenied] = await Promise.all([
+    const [clearDenied, tossDenied, clickDenied] = await Promise.all([
       tools[0]!.handler({
         from: { x: 0, y: 64, z: 0 }, to: { x: 0, y: 64, z: 0 },
         includeContainers: false, preserve: [], collectDrops: false,
       }),
       tools[1]!.handler({ item: "stone", count: 1 }),
-      tools[2]!.handler({ selector: { username: "Target" }, mode: "once", maxHits: 1, maxSeconds: 1, maxRange: 2 }),
-      tools[3]!.handler({ slot: 0, mouseButton: 0, mode: "click" }),
+      tools[2]!.handler({ slot: 0, mouseButton: 0, mode: "click" }),
     ]);
 
     expect(clearDenied).toMatchObject({
@@ -116,30 +112,23 @@ describe("role-based tool authorization", () => {
     expect(tossDenied).toMatchObject({
       ok: false, code: "PERMISSION_DENIED", details: { tool: "tossItem", minimumRole: "owner" },
     });
-    expect(attackDenied).toMatchObject({
-      ok: false, code: "PERMISSION_DENIED", details: { tool: "attackPlayer", minimumRole: "owner" },
-    });
     expect(clickDenied).toMatchObject({
       ok: false, code: "PERMISSION_DENIED", details: { tool: "clickWindowSlot", minimumRole: "owner" },
     });
     expect((runner as any).run).not.toHaveBeenCalled();
   });
 
-  it("denies viewers but permits operators to invoke real Task 7 operator skills", async () => {
+  it("denies viewers but permits operators to invoke a real operator skill", async () => {
     const runner = { run: vi.fn().mockResolvedValue({ ok: true, summary: "ran" }) } as never;
     const viewer = { username: "spectator", role: "viewer" as const, source: "minecraft-chat" as const };
     const operator = { username: "builder", role: "operator" as const, source: "minecraft-chat" as const };
-    const viewerAttack = authorizeTool(createSkillTool(attackMob, runner, () => viewer), viewer);
     const viewerInspect = authorizeTool(createSkillTool(inspectWindow, runner, () => viewer), viewer);
-    const operatorAttack = authorizeTool(createSkillTool(attackMob, runner, () => operator), operator);
+    const operatorInspect = authorizeTool(createSkillTool(inspectWindow, runner, () => operator), operator);
 
-    await expect(viewerAttack.handler({ selector: { entityId: 7 } })).resolves.toMatchObject({
-      ok: false, code: "PERMISSION_DENIED", details: { tool: "attackMob", minimumRole: "operator" },
-    });
     await expect(viewerInspect.handler({})).resolves.toMatchObject({
       ok: false, code: "PERMISSION_DENIED", details: { tool: "inspectWindow", minimumRole: "operator" },
     });
-    await expect(operatorAttack.handler({ selector: { entityId: 7 } })).resolves.toMatchObject({
+    await expect(operatorInspect.handler({})).resolves.toMatchObject({
       ok: true, summary: "ran",
     });
     expect((runner as any).run).toHaveBeenCalledTimes(1);

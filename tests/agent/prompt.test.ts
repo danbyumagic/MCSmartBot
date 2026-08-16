@@ -129,11 +129,9 @@ describe("prompt builders", () => {
     expect(prompt).toMatch(/stated bounds.*without.*second confirmation|without.*second confirmation.*stated bounds/i);
   });
 
-  it("advertises bounded combat and narrow entity/window actions", () => {
+  it("advertises narrow entity/window actions without deferred proactive combat", () => {
     const prompt = buildSystemPrompt("alice");
     for (const skill of [
-      "attackMob",
-      "attackPlayer",
       "activateEntity",
       "openVillager",
       "tradeVillager",
@@ -143,10 +141,11 @@ describe("prompt builders", () => {
     ]) {
       expect(prompt).toContain(skill);
     }
-    expect(prompt).toMatch(/attackPlayer.*owner-only|owner-only.*attackPlayer/i);
     expect(prompt).toMatch(/clickWindowSlot.*owner-only|owner-only.*clickWindowSlot/i);
-    expect(prompt).toMatch(/explicitly requested bounded combat/i);
     expect(prompt).toMatch(/inspect a window.*clickWindowSlot/i);
+    expect(prompt).not.toContain("attackMob");
+    expect(prompt).not.toContain("attackPlayer");
+    expect(prompt).not.toContain("huntAnimals");
   });
 
   it("routes original construction through compact BuildOps preview and registration", () => {
@@ -182,7 +181,7 @@ describe("prompt builders", () => {
     expect(prompt).toMatch(/atomic exact actions/i);
     expect(prompt).toMatch(/buildops.*raw cell enumeration/i);
     expect(prompt).toMatch(/missionScript.*survive restart/i);
-    expect(prompt).toMatch(/clearRegion.*attackPlayer.*owner-only|attackPlayer.*clearRegion.*owner-only/i);
+    expect(prompt).toMatch(/clearRegion.*owner-only|owner-only.*clearRegion/i);
     expect(prompt).toMatch(/never turn a minecraft action into executable javascript python shell/i);
     expect(prompt).toMatch(/previewUndoTransaction/);
     expect(prompt).toMatch(/best-effort/i);

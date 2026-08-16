@@ -17,7 +17,6 @@ import {
 import { TaskPlanAuthorizationError } from "../../src/tasks/engine.js";
 import { createClearRegionSkill } from "../../src/skills/world/clearRegion.js";
 import { tossItem } from "../../src/skills/items/tossItem.js";
-import { attackPlayer } from "../../src/skills/combat/attackPlayer.js";
 import { clickWindowSlot } from "../../src/skills/interaction/clickWindowSlot.js";
 import {
   attachMissionRunTaskPlan,
@@ -316,7 +315,7 @@ describe("task engine", () => {
     const clearRegion = createClearRegionSkill({ transactions: {} as never, serverKey: "test:25565" });
     const engine = createEngine({
       runner,
-      registry: createSkillRegistry([skill, clearRegion, tossItem, attackPlayer, clickWindowSlot]),
+      registry: createSkillRegistry([skill, clearRegion, tossItem, clickWindowSlot]),
     });
 
     for (const step of [
@@ -328,10 +327,6 @@ describe("task engine", () => {
         },
       },
       { skill: "tossItem", params: { item: "stone", count: 1 } },
-      {
-        skill: "attackPlayer",
-        params: { selector: { username: "Target" }, mode: "once", maxHits: 1, maxSeconds: 1, maxRange: 2 },
-      },
       { skill: "clickWindowSlot", params: { slot: 0, mouseButton: 0, mode: "click" } },
     ]) {
       expect(() => engine.create({ title: `denied ${step.skill}`, actor: operatorActor, steps: [step] }))

@@ -186,7 +186,7 @@ describe("production capability inventory", () => {
     });
 
     expect(tools).toHaveLength(50);
-    expect(skills).toHaveLength(38);
+    expect(skills).toHaveLength(35);
     expect(new Set(tools.map((tool) => tool.name)).size).toBe(tools.length);
     expect(new Set(skills.map((skill) => skill.name)).size).toBe(skills.length);
 

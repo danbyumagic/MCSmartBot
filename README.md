@@ -4,6 +4,8 @@ MCSmartBot is a goal-driven Minecraft Java companion bot built on Mineflayer. It
 
 The first stable release is intentionally **headless**. Experimental desktop/control-panel work and proactive combat features are developed privately and are not part of v0.1.
 
+The `main` branch is the supported public source line. Experimental work is reviewed against the public release boundary before it is promoted here, so the repository stays focused on code and documentation that are intended to ship.
+
 ## Core v0.1 capabilities
 
 - natural-language instructions through Minecraft chat and a local CLI;

@@ -1,0 +1,149 @@
+{
+  "format": "smartbotmc.upstream-reuse/v1",
+  "approvedReuse": [
+    {
+      "name": "mineflayer",
+      "repository": "https://github.com/PrismarineJS/mineflayer",
+      "commit": "4a2e160a39d48a9817e7a9c1c320b12e3b495fad",
+      "license": "MIT",
+      "licenseFile": "LICENSES/mineflayer-MIT.txt",
+      "sourcePaths": [
+        "lib/plugins/physics.js",
+        "lib/plugins/generic_place.js",
+        "lib/plugins/inventory.js"
+      ],
+      "adaptedPaths": [
+        "src/bot/clientTickEnd.ts"
+      ],
+      "notes": "The modern client tick-end and interaction-sequence behavior is adapted as a temporary runtime compatibility shim for Mineflayer 4.37.1. SmartBotMC adds same-tick native-send detection, a shared signed sequence across placement/use/dig packets, the missing Minecraft 1.21.4+ player-loaded acknowledgement, and reversible teardown so a future upstream implementation is not duplicated. The adapted file retains an MIT modification notice."
+    },
+    {
+      "name": "minecraft-agentic",
+      "repository": "https://github.com/NoblerWorks-HQ/minecraft-agentic",
+      "commit": "7e2590d9150e47956371e610e1f3ac050d3f7ad2",
+      "license": "MIT",
+      "licenseFile": "LICENSES/minecraft-agentic-MIT.txt",
+      "sourcePaths": [
+        "src/ops.js",
+        "src/library/canvas.js",
+        "test/ops.test.mjs"
+      ],
+      "adaptedPaths": [
+        "src/construction/buildOps/canvas.ts",
+        "src/construction/buildOps/compiler.ts",
+        "tests/construction/buildOps/canvas.test.ts",
+        "tests/construction/buildOps/compiler.test.ts"
+      ],
+      "notes": "The bounded coordinate-map canvas, compact primitive expansion, and focused translated tests adapt the approved concepts while adding strict schemas, version-aware registries, audit hashing, risk classification, and fail-closed limits. Every listed adaptation retains an MIT modification notice."
+    },
+    {
+      "name": "cobble-mcp",
+      "repository": "https://github.com/brian-mwirigi/cobble-mcp",
+      "commit": "47edea1a9cc965776c578d66d24233bc9563dd2f",
+      "license": "MIT",
+      "licenseFile": "LICENSES/cobble-mcp-MIT.txt",
+      "sourcePaths": [
+        "src/bot/design.ts"
+      ],
+      "adaptedPaths": [
+        "src/construction/buildOps/ascii.ts"
+      ],
+      "notes": "The strict bounded palette and ASCII-layer expansion adapt the approved parsing concept while rejecting malformed art, omitting air/world changes, and routing cells through SmartBotMC's version-aware canvas compiler. The listed adaptation retains an MIT modification notice."
+    },
+    {
+      "name": "mc-architect-mcp",
+      "repository": "https://github.com/AnctyEnly453/mc-architect-mcp",
+      "commit": "51fe736bf4bf59185f961e80f01b58c36b67f7fa",
+      "license": "MIT",
+      "licenseFile": "LICENSES/mc-architect-mcp-MIT.txt",
+      "sourcePaths": [
+        "bridge/src/geometry.ts",
+        "bridge/src/boxes.ts"
+      ],
+      "adaptedPaths": [
+        "src/construction/buildOps/geometry.ts"
+      ],
+      "notes": "The pure curved-wall, dome, and spiral geometry algorithms are adapted into bounded placement-cell emitters with typed placement hints. Fabric/server execution, FillOperation compression, and arbitrary block-state strings are excluded. The listed adaptation retains an MIT modification notice."
+    },
+    {
+      "name": "ahmad-minecraft-mcp",
+      "repository": "https://github.com/AhmadTariq1337/minecraft-mcp-server",
+      "commit": "39ab7c3a3d5cb1f6262fba080858b083647e650a",
+      "license": "MIT",
+      "licenseFile": "LICENSES/ahmad-minecraft-mcp-MIT.txt",
+      "sourcePaths": [
+        "src/tools/interaction.ts",
+        "src/tools/building.ts",
+        "src/tools/social.ts"
+      ],
+      "adaptedPaths": [
+        "src/skills/combat/attackMob.ts",
+        "src/skills/interaction/openVillager.ts",
+        "src/skills/interaction/tradeVillager.ts"
+      ],
+      "notes": "The bounded attack and villager Mineflayer action bodies adapt the approved interaction/social sources. Stable selectors, authorization, cancellation, verification, and focused tests are SmartBotMC-authored. Every listed adaptation retains an MIT modification notice."
+    },
+    {
+      "name": "yuniko-minecraft-mcp",
+      "repository": "https://github.com/yuniko-software/minecraft-mcp-server",
+      "commit": "240c8cec337ce152cc9e058ebdef511055808406",
+      "license": "Apache-2.0",
+      "licenseFile": "LICENSES/yuniko-minecraft-mcp-Apache-2.0.txt",
+      "sourcePaths": [
+        "src/tools/block-tools.ts",
+        "tests/block-tools.test.ts"
+      ],
+      "adaptedPaths": [
+        "src/world/reach.ts",
+        "src/world/blockExecutor.ts"
+      ],
+      "notes": "Coordinate placement/digging reach concepts are adapted in the verified executor. Both adapted TypeScript files retain Apache modification notices; snapshots, persistence contracts, and focused tests are SmartBotMC-authored."
+    },
+    {
+      "name": "mc-multimodal-agent",
+      "repository": "https://github.com/win10ogod/mc-multimodal-agent",
+      "commit": "8d1b9dc62d5a9e99aa2b33fd50fe19ee2b920f0e",
+      "license": "Apache-2.0",
+      "licenseFile": "LICENSES/mc-multimodal-agent-Apache-2.0.txt",
+      "sourcePaths": [
+        "src/tools/MinecraftTools.ts",
+        "test/execute-steps.test.ts"
+      ],
+      "adaptedPaths": [
+        "src/missions/schema.ts",
+        "tests/missions/schema.test.ts"
+      ],
+      "notes": "The bounded ordered-step and meta-operation rejection guard, plus its focused translated test shape, adapt the approved execute_steps concepts. SmartBotMC adds a strict typed MissionScript schema, JSON-only data boundaries, BuildOps embedding, canonical hashing, and no tool execution or dry-run dispatch. Mission persistence types, storage, schema SQL, and durable task integration are SmartBotMC-authored. Each listed adaptation retains an Apache modification notice."
+    }
+  ],
+  "referenceOnly": [
+    {
+      "name": "cairn",
+      "repository": "https://github.com/VasilisDragon/cairn",
+      "commit": "fac4fee5db0fa4fb572e6ca3c085410124235715",
+      "license": "AGPL-3.0",
+      "reason": "Architectural ideas may inform requirements, but no source, tests, comments, strings, or close translations are imported."
+    },
+    {
+      "name": "steveX",
+      "repository": "https://github.com/piggy4/steveX",
+      "commit": "27cda5ddad42712b1cd4d5adc43c12ef573c2259",
+      "license": "unknown",
+      "reason": "The pinned snapshot has no clear repository license, so no source is imported."
+    },
+    {
+      "name": "pinecone-minecraft-bot-mcp",
+      "repository": "https://github.com/PineconeLP/minecraft-bot-mcp",
+      "commit": "e9c0a80f55372a455d970a8d0ffdb1c569a51306",
+      "license": "unknown",
+      "reason": "The pinned snapshot has no clear repository license, so no source is imported."
+    },
+    {
+      "name": "HermesCraft",
+      "repository": "https://github.com/HermesCraft/HermesCraft",
+      "commit": null,
+      "license": "MIT",
+      "reason": "Multi-bot and social orchestration are out of scope for this slice; no source is imported."
+    }
+  ]
+}

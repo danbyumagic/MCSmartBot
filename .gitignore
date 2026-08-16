@@ -1,0 +1,15 @@
+node_modules/
+dist/
+dist-headless/
+release/
+**/.vite/
+out/
+data/
+.env
+.env.local
+smartbot.json
+/SMOKEenv
+/kpopenv
+*.log
+.DS_Store
+server.json

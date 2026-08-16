@@ -1,0 +1,36 @@
+{
+  "name": "Example Server",
+  "publicChatCommand": "nc",
+  "commands": [
+    {
+      "name": "home",
+      "syntax": "/home <name>",
+      "description": "Teleport to a previously saved home location. Use when the owner says 'go home' or names a specific home."
+    },
+    {
+      "name": "sethome",
+      "syntax": "/sethome <name>",
+      "description": "Save the bot's current location as a named home."
+    },
+    {
+      "name": "warp",
+      "syntax": "/warp <name>",
+      "description": "Teleport to a server-defined warp point."
+    },
+    {
+      "name": "rtp",
+      "syntax": "/rtp",
+      "description": "Random teleport to a fresh world location. May have a cooldown."
+    },
+    {
+      "name": "pay",
+      "syntax": "/pay <player> <amount>",
+      "description": "Transfer in-game money to another player.",
+      "destructive": true
+    }
+  ],
+  "notes": [
+    "Server uses EssentialsChat — whispers appear as '[player -> me] message' to the bot.",
+    "The /nc command broadcasts to all connected players network-wide, not just the current world."
+  ]
+}

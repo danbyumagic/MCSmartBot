@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "outDir": "dist-headless" },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "dist-headless", "tests", "data"]
+}

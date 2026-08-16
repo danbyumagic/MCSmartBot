@@ -1,0 +1,45 @@
+{
+  "name": "mcsmartbot",
+  "productName": "MCSmartBot",
+  "description": "A goal-driven headless Minecraft companion bot built on Mineflayer.",
+  "version": "0.1.0-beta.2",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "build": "tsc -p tsconfig.json && mkdir -p dist/memory dist/dashboard && cp src/memory/schema.sql dist/memory/schema.sql && cp src/dashboard/index.html dist/dashboard/index.html",
+    "test": "node scripts/runReleaseTests.mjs",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "release:headless": "npm run typecheck && npm test && npm run build && node scripts/buildHeadlessRelease.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.1.0",
+    "better-sqlite3": "^13.0.3",
+    "dotenv": "^16.4.5",
+    "minecraft-data": "^3.112.0",
+    "mineflayer": "^4.37.1",
+    "mineflayer-collectblock": "^1.6.0",
+    "mineflayer-pathfinder": "^2.4.5",
+    "pino": "^9.5.0",
+    "vec3": "^0.1.10",
+    "zod": "^3.23.8",
+    "zod-to-json-schema": "^3.23.5"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.7.0",
+    "pino-pretty": "^11.3.0",
+    "prismarine-block": "^1.23.0",
+    "prismarine-entity": "^2.6.0",
+    "prismarine-item": "^1.18.0",
+    "prismarine-recipe": "^1.5.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}

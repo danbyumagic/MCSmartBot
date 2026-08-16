@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "server": {
+    "host": "superclankers.vip",
+    "port": 25565,
+    "version": "1.21.11"
+  },
+  "minecraft": {
+    "username": "your-microsoft-account@example.com",
+    "auth": "microsoft"
+  },
+  "ownerUsername": "YourMcName",
+  "agent": {
+    "provider": "openrouter",
+    "apiKey": "replace-with-your-openrouter-key",
+    "model": "openai/gpt-4o-mini",
+    "baseUrl": "https://openrouter.ai/api/v1"
+  },
+  "dataDir": "./data",
+  "logLevel": "info",
+  "chatMirrorEnabled": true,
+  "dashboardEnabled": true,
+  "dashboardHost": "127.0.0.1",
+  "dashboardPort": 8787
+}

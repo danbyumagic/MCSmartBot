@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SmartBot Control Room</title>
+  <meta name="description" content="Local operations dashboard for SmartBotMC">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #090c0b;
+      --panel: #111613;
+      --panel-2: #171d19;
+      --line: #28322c;
+      --text: #eef6f0;
+      --muted: #8fa098;
+      --lime: #a6ff4d;
+      --cyan: #55e6c1;
+      --amber: #ffc857;
+      --red: #ff6b6b;
+      --shadow: 0 18px 48px rgba(0, 0, 0, .28);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 78% -12%, rgba(85, 230, 193, .12), transparent 34rem),
+        radial-gradient(circle at -8% 35%, rgba(166, 255, 77, .08), transparent 28rem),
+        var(--bg);
+      color: var(--text);
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .19;
+      background-image:
+        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+      background-size: 32px 32px;
+      mask-image: linear-gradient(to bottom, black, transparent 72%);
+    }
+    button { font: inherit; }
+    .shell { width: min(1480px, calc(100% - 40px)); margin: 0 auto; padding: 28px 0 54px; }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+    .brand { display: flex; align-items: center; gap: 13px; }
+    .mark {
+      width: 38px; height: 38px; border: 1px solid #4b5c52; border-radius: 9px;
+      background:
+        linear-gradient(90deg, transparent 8px, var(--lime) 8px 14px, transparent 14px 22px, var(--cyan) 22px 28px, transparent 28px),
+        linear-gradient(#1e2923 8px, transparent 8px 14px, #1e2923 14px 22px, transparent 22px 28px, #1e2923 28px);
+      box-shadow: inset 0 0 18px rgba(166,255,77,.08), 0 0 22px rgba(85,230,193,.08);
+    }
+    .brand h1 { margin: 0; font-size: 18px; letter-spacing: -.02em; }
+    .brand p { margin: 2px 0 0; color: var(--muted); font: 11px ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase; }
+    .top-actions { display: flex; align-items: center; gap: 10px; }
+    .connection {
+      display: flex; align-items: center; gap: 8px; max-width: 520px;
+      padding: 9px 13px; border: 1px solid var(--line); border-radius: 999px;
+      color: #bfcdc5; background: rgba(17, 22, 19, .8);
+      font: 12px ui-monospace, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--lime); box-shadow: 0 0 10px var(--lime); }
+    .connection.offline .dot { background: var(--red); box-shadow: 0 0 10px var(--red); }
+    .refresh {
+      color: var(--text); background: var(--panel-2); border: 1px solid var(--line);
+      border-radius: 9px; padding: 9px 13px; cursor: pointer;
+    }
+    .refresh:hover, .refresh:focus-visible { border-color: var(--cyan); outline: none; }
+    .hero {
+      position: relative; overflow: hidden; padding: 28px 30px; margin-bottom: 16px;
+      border: 1px solid #344139; border-radius: 18px;
+      background: linear-gradient(122deg, rgba(31, 42, 35, .94), rgba(17, 22, 19, .88));
+      box-shadow: var(--shadow);
+    }
+    .hero::after {
+      content: ""; position: absolute; width: 280px; height: 280px; right: -90px; top: -160px;
+      border: 44px solid rgba(166,255,77,.06); transform: rotate(18deg);
+    }
+    .eyebrow { color: var(--cyan); font: 11px ui-monospace, monospace; letter-spacing: .16em; text-transform: uppercase; }
+    .goal { margin: 10px 0 6px; max-width: 920px; font-size: clamp(24px, 4vw, 48px); line-height: 1.02; letter-spacing: -.045em; }
+    .subline { color: var(--muted); font-size: 13px; }
+    .metrics { display: grid; grid-template-columns: repeat(7, minmax(110px, 1fr)); gap: 10px; margin: 16px 0; }
+    .metric, .panel {
+      border: 1px solid var(--line); background: rgba(17, 22, 19, .9);
+      box-shadow: var(--shadow);
+    }
+    .metric { padding: 16px; border-radius: 12px; min-height: 100px; }
+    .metric span { display: block; color: var(--muted); font-size: 11px; line-height: 1.25; text-transform: uppercase; letter-spacing: .08em; }
+    .metric strong { display: block; margin-top: 13px; font-size: 28px; letter-spacing: -.04em; }
+    .metric.hot strong { color: var(--amber); }
+    .grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 16px; margin-top: 16px; }
+    .panel { border-radius: 15px; overflow: hidden; min-width: 0; }
+    .panel-head { display: flex; align-items: end; justify-content: space-between; gap: 12px; padding: 19px 20px 15px; border-bottom: 1px solid var(--line); }
+    .panel-head h2 { margin: 0; font-size: 15px; }
+    .panel-head span { color: var(--muted); font: 10px ui-monospace, monospace; text-transform: uppercase; letter-spacing: .1em; }
+    .rows { padding: 7px 12px 11px; }
+    .row {
+      display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px;
+      min-height: 58px; padding: 10px 8px; border-bottom: 1px solid rgba(40,50,44,.72);
+    }
+    .row:last-child { border-bottom: 0; }
+    .row-main { min-width: 0; }
+    .row-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+    .row-meta { margin-top: 5px; color: var(--muted); font: 11px ui-monospace, monospace; }
+    .badge { padding: 5px 8px; border: 1px solid #3b4a41; border-radius: 999px; color: #bfd0c6; font: 10px ui-monospace, monospace; text-transform: uppercase; }
+    .badge.running, .badge.active, .badge.completed { color: var(--lime); border-color: rgba(166,255,77,.32); }
+    .badge.failed, .badge.critical, .badge.blocked { color: var(--red); border-color: rgba(255,107,107,.35); }
+    .badge.warning, .badge.paused { color: var(--amber); border-color: rgba(255,200,87,.34); }
+    .event-row { grid-template-columns: 7px minmax(0, 1fr) auto; gap: 12px; }
+    .event-severity { width: 7px; height: 34px; border-radius: 4px; background: #526057; }
+    .event-severity.warning { background: var(--amber); }
+    .event-severity.critical { background: var(--red); }
+    .time { color: #68776f; font: 10px ui-monospace, monospace; white-space: nowrap; }
+    .triple { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 16px; }
+    .empty { padding: 28px 10px; text-align: center; color: var(--muted); font-size: 12px; }
+    .footer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+    .map-bars { padding: 18px 20px 20px; }
+    .bar { display: grid; grid-template-columns: 110px minmax(80px, 1fr) 44px; align-items: center; gap: 12px; margin: 12px 0; }
+    .bar label { color: #c8d5ce; font-size: 12px; text-transform: capitalize; }
+    .track { height: 7px; border-radius: 999px; overflow: hidden; background: #222c26; }
+    .fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--cyan), var(--lime)); }
+    .bar output { color: var(--muted); font: 11px ui-monospace, monospace; text-align: right; }
+    .role.owner { color: var(--lime); }
+    .world-map-panel {
+      margin-top: 16px; color: #172019; background: #f7faf5;
+      border-color: #cbd6cd; box-shadow: 0 18px 48px rgba(25, 47, 32, .12);
+    }
+    .world-map-panel .panel-head { border-bottom-color: #d7dfd8; }
+    .world-map-panel .panel-head span { color: #68756c; }
+    .map-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .map-toolbar select, .map-tool {
+      min-height: 34px; padding: 7px 10px; color: #263229; background: #ffffff;
+      border: 1px solid #c8d3ca; border-radius: 8px; font: 11px ui-monospace, monospace;
+    }
+    .map-toolbar select { max-width: 240px; }
+    .map-tool { cursor: pointer; min-width: 36px; }
+    .map-tool.active { color: #17462a; border-color: #73aa82; background: #e4f4e7; }
+    .map-toolbar select:focus-visible, .map-tool:focus-visible { border-color: var(--cyan); outline: none; }
+    .map-stage { position: relative; min-height: 520px; background: #edf2ec; }
+    #worldMap { display: block; width: 100%; height: 520px; cursor: grab; touch-action: none; }
+    #worldMap.dragging { cursor: grabbing; }
+    .map-readout {
+      position: absolute; left: 14px; bottom: 13px; padding: 7px 9px;
+      color: #334139; background: rgba(255, 255, 255, .88); border: 1px solid #cbd6cd;
+      border-radius: 7px; pointer-events: none; font: 10px ui-monospace, monospace;
+    }
+    .map-legend { display: flex; flex-wrap: wrap; gap: 13px; padding: 11px 18px; border-top: 1px solid #d7dfd8; color: #68756c; font: 10px ui-monospace, monospace; }
+    .legend-key::before { content: ""; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 2px; background: var(--key); }
+    .updated { margin: 18px 2px 0; color: #617068; font: 10px ui-monospace, monospace; text-align: right; }
+    @media (max-width: 1100px) {
+      .metrics { grid-template-columns: repeat(4, 1fr); }
+      .triple { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 760px) {
+      .shell { width: min(100% - 24px, 1480px); padding-top: 18px; }
+      header { align-items: flex-start; }
+      .top-actions { align-items: flex-end; flex-direction: column-reverse; }
+      .connection { max-width: 44vw; }
+      .hero { padding: 24px 20px; }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+      .grid, .footer-grid { grid-template-columns: 1fr; }
+      .panel-head.map-head { align-items: flex-start; flex-direction: column; }
+      .map-stage, #worldMap { min-height: 380px; height: 380px; }
+    }
+    @media (max-width: 430px) {
+      .brand p { display: none; }
+      .connection { display: none; }
+      .metrics { grid-template-columns: 1fr 1fr; }
+      .metric { min-height: 88px; padding: 13px; }
+      .metric strong { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div class="brand">
+        <div class="mark" aria-hidden="true"></div>
+        <div><h1>SmartBot Control Room</h1><p>Local operations console</p></div>
+      </div>
+      <div class="top-actions">
+        <div class="connection" id="connection"><span class="dot"></span><span id="connectionText">connecting</span></div>
+        <button class="refresh" id="refresh" type="button" aria-label="Refresh dashboard">Refresh</button>
+      </div>
+    </header>
+
+    <section class="hero" aria-labelledby="goalTitle">
+      <div class="eyebrow">Current directive</div>
+      <h2 class="goal" id="goalTitle">No active goal</h2>
+      <div class="subline" id="goalMeta">SmartBot is standing by for its next assignment.</div>
+    </section>
+
+    <section class="metrics" id="metrics" aria-label="Operational metrics"></section>
+
+    <section class="triple" aria-label="Live bot state">
+      <article class="panel">
+        <div class="panel-head"><h2>Active operation</h2><span>Live runtime</span></div>
+        <div class="rows" id="liveOperation"></div>
+      </article>
+      <article class="panel">
+        <div class="panel-head"><h2>Inventory &amp; equipment</h2><span>Live slots</span></div>
+        <div class="rows" id="liveInventory"></div>
+      </article>
+      <article class="panel">
+        <div class="panel-head"><h2>Movement issues</h2><span>Recent failures</span></div>
+        <div class="rows" id="movementFailures"></div>
+      </article>
+    </section>
+
+    <section class="panel world-map-panel" aria-labelledby="worldMapTitle">
+      <div class="panel-head map-head">
+        <div><h2 id="worldMapTitle">Overhead world map</h2><span>Persistent travel &amp; scan history</span></div>
+        <div class="map-toolbar" aria-label="Map controls">
+          <select id="mapServer" aria-label="Mapped server"></select>
+          <select id="mapDimension" aria-label="Mapped dimension"></select>
+          <button class="map-tool" id="mapFit" type="button">Fit</button>
+          <button class="map-tool active" id="mapSurveys" type="button" aria-pressed="true">Surveys: on</button>
+          <button class="map-tool" id="mapZoomOut" type="button" aria-label="Zoom out">−</button>
+          <button class="map-tool" id="mapZoomIn" type="button" aria-label="Zoom in">+</button>
+        </div>
+      </div>
+      <div class="map-stage">
+        <canvas id="worldMap" aria-label="Top-down map of bot travel and surveyed areas"></canvas>
+        <div class="map-readout" id="mapReadout">Move across the map to inspect coordinates</div>
+      </div>
+      <div class="map-legend" aria-label="Map legend">
+        <span class="legend-key" style="--key:#58a84c">grass / foliage</span>
+        <span class="legend-key" style="--key:#438fd1">water</span>
+        <span class="legend-key" style="--key:#dac47a">sand</span>
+        <span class="legend-key" style="--key:#8b948d">stone</span>
+        <span class="legend-key" style="--key:#27a8a0">visited</span>
+        <span class="legend-key" style="--key:#487a32">trail</span>
+        <span class="legend-key" style="--key:#e09f24">survey</span>
+        <span class="legend-key" style="--key:#77a7ff">resource</span>
+        <span class="legend-key" style="--key:#ff6b6b">hazard</span>
+        <span class="legend-key" style="--key:#ffffff">bot</span>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="panel">
+        <div class="panel-head"><h2>Durable task queue</h2><span>Newest &amp; active</span></div>
+        <div class="rows" id="tasks"></div>
+      </article>
+      <article class="panel">
+        <div class="panel-head"><h2>Event stream</h2><span>Persistent log</span></div>
+        <div class="rows" id="events"></div>
+      </article>
+    </section>
+
+    <section class="triple">
+      <article class="panel"><div class="panel-head"><h2>Supply goals</h2><span>Recurring</span></div><div class="rows" id="supply"></div></article>
+      <article class="panel"><div class="panel-head"><h2>Farm cycles</h2><span>Harvest &amp; replant</span></div><div class="rows" id="farms"></div></article>
+      <article class="panel"><div class="panel-head"><h2>Construction</h2><span>Blueprint jobs</span></div><div class="rows" id="builds"></div></article>
+    </section>
+
+    <section class="footer-grid">
+      <article class="panel">
+        <div class="panel-head"><h2>World knowledge</h2><span>Mapped observations</span></div>
+        <div class="map-bars" id="map"></div>
+      </article>
+      <article class="panel">
+        <div class="panel-head"><h2>Authorized crew</h2><span>Owner-managed roles</span></div>
+        <div class="rows" id="roles"></div>
+      </article>
+    </section>
+    <div class="updated" id="updated">Waiting for first snapshot</div>
+  </main>
+  <script>
+    const byId = (id) => document.getElementById(id);
+    const make = (tag, className, text) => {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = String(text);
+      return node;
+    };
+    const safeStatus = (value) => String(value || "").toLowerCase().replace(/[^a-z]/g, "");
+    const timeAgo = (ts) => {
+      const seconds = Math.max(0, Math.floor((Date.now() - Number(ts)) / 1000));
+      if (seconds < 60) return `${seconds}s ago`;
+      if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+      if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+      return `${Math.floor(seconds / 86400)}d ago`;
+    };
+    const empty = (container, text) => {
+      container.replaceChildren(make("div", "empty", text));
+    };
+    const addRow = (container, title, meta, status) => {
+      const row = make("div", "row");
+      const main = make("div", "row-main");
+      main.append(make("div", "row-title", title), make("div", "row-meta", meta));
+      row.append(main, make("span", `badge ${safeStatus(status)}`, status));
+      container.append(row);
+    };
+    function renderMetrics(metrics) {
+      const labels = [
+        ["activeTasks", "Active tasks"], ["failedTasks", "Failed tasks"],
+        ["activeSupplyGoals", "Supply goals"], ["activeFarms", "Active farms"],
+        ["activeBuilds", "Build jobs"], ["mappedObservations", "Map records"],
+        ["indexedContainers", "Indexed storage"]
+      ];
+      byId("metrics").replaceChildren(...labels.map(([key, label]) => {
+        const card = make("article", `metric ${key === "failedTasks" && metrics[key] ? "hot" : ""}`);
+        card.append(make("span", "", label), make("strong", "", metrics[key] ?? 0));
+        return card;
+      }));
+    }
+    function renderRows(data) {
+      const tasks = byId("tasks"); tasks.replaceChildren();
+      if (!data.tasks.length) empty(tasks, "No durable tasks yet");
+      data.tasks.forEach((task) => {
+        const stage = task.currentStep
+          ? ` · ${task.currentStep} (${task.currentStepStatus})`
+          : "";
+        addRow(tasks, `#${task.id} ${task.title}`, `${task.completedSteps}/${task.totalSteps} steps${stage} · ${timeAgo(task.updatedAt)}${task.lastError ? " · " + task.lastError : ""}`, task.status);
+      });
+
+      const supply = byId("supply"); supply.replaceChildren();
+      if (!data.supplyGoals.length) empty(supply, "No standing supply goals");
+      data.supplyGoals.forEach((goal) => addRow(supply, `${goal.item} → ${goal.containerName}`, `target ${goal.targetQuantity} · next ${timeAgo(goal.nextCheckAt)}`, goal.status));
+
+      const farms = byId("farms"); farms.replaceChildren();
+      if (!data.farms.length) empty(farms, "No registered farms");
+      data.farms.forEach((farm) => addRow(farms, farm.name, `${farm.crop} · next ${timeAgo(farm.nextCheckAt)}`, farm.status));
+
+      const builds = byId("builds"); builds.replaceChildren();
+      if (!data.builds.length) empty(builds, "No construction jobs");
+      data.builds.forEach((build) => {
+        const stage = build.stage
+          ? `${build.stage} (${build.stageStatus})`
+          : "no active stage";
+        const site = `${build.dimension} · ${build.originX}, ${build.originY}, ${build.originZ} · ${build.rotation}°`;
+        addRow(builds, `#${build.id} ${build.blueprint}`, `${build.placedCount}/${build.totalCount} blocks · ${stage} · ${site} · ${timeAgo(build.updatedAt)}`, build.status);
+      });
+    }
+    const itemText = (item) => {
+      if (!item) return "empty";
+      const durability = item.durability ? ` · ${item.durability.remaining}/${item.durability.maximum} durability` : "";
+      const enchants = item.enchantments?.length
+        ? ` · ${item.enchantments.map((entry) => `${entry.name} ${entry.level}`).join(", ")}`
+        : "";
+      return `${item.count} ${item.customName || item.name}${durability}${enchants}`;
+    };
+    function renderLive(data) {
+      const live = data.live || {};
+      const operation = byId("liveOperation"); operation.replaceChildren();
+      const position = live.position
+        ? `${Number(live.position.x).toFixed(1)}, ${Number(live.position.y).toFixed(1)}, ${Number(live.position.z).toFixed(1)}`
+        : "not spawned";
+      addRow(
+        operation,
+        live.activeSkill || "idle",
+        `${live.dimension || "unknown dimension"} · ${position}`,
+        live.activeSkill ? "running" : live.connection
+      );
+      addRow(
+        operation,
+        `health ${Number.isFinite(Number(live.health)) ? Number(live.health).toFixed(1) : "—"} · ` +
+          `food ${Number.isFinite(Number(live.food)) ? Math.round(Number(live.food)) : "—"}`,
+        "Minecraft vitals",
+        live.health !== null && live.health <= 6 ? "warning" : "live"
+      );
+
+      const inventory = byId("liveInventory"); inventory.replaceChildren();
+      if (!live.inventory?.available) {
+        empty(inventory, "Inventory unavailable until the bot spawns");
+      } else {
+        const inv = live.inventory;
+        addRow(
+          inventory,
+          `${inv.usedSlots}/${inv.capacity} slots`,
+          `${inv.freeSlots} free · held ${itemText(inv.held)}`,
+          inv.freeSlots === 0 ? "blocked" : "ready"
+        );
+        const equipment = [
+          ["head", inv.equipment.head], ["torso", inv.equipment.torso],
+          ["legs", inv.equipment.legs], ["feet", inv.equipment.feet],
+          ["offhand", inv.equipment.offHand]
+        ].map(([slot, item]) => `${slot} ${itemText(item)}`).join(" · ");
+        addRow(inventory, "equipment", equipment, inv.nearBreaking.length ? "warning" : "ready");
+        if (inv.totals.length) {
+          addRow(
+            inventory,
+            inv.totals.slice(0, 6).map((item) => `${item.count} ${item.name}`).join(" · "),
+            `${inv.totals.length} unique carried item${inv.totals.length === 1 ? "" : "s"}`,
+            "carried"
+          );
+        }
+      }
+
+      const failures = byId("movementFailures"); failures.replaceChildren();
+      if (!data.movementFailures.length) empty(failures, "No recent movement failures");
+      data.movementFailures.forEach((failure) => {
+        const detail = failure.details?.failureKind
+          ? `${failure.details.failureKind} · ${failure.summary}`
+          : failure.summary;
+        addRow(
+          failures,
+          `#${failure.id} ${failure.skill}`,
+          `${detail} · ${timeAgo(failure.ts)}`,
+          failure.code || "failed"
+        );
+      });
+    }
+    function renderEvents(events) {
+      const container = byId("events"); container.replaceChildren();
+      if (!events.length) return empty(container, "No events recorded");
+      events.forEach((event) => {
+        const row = make("div", "row event-row");
+        row.append(make("span", `event-severity ${safeStatus(event.severity)}`));
+        const main = make("div", "row-main");
+        main.append(make("div", "row-title", event.summary), make("div", "row-meta", event.type));
+        row.append(main, make("span", "time", timeAgo(event.ts)));
+        container.append(row);
+      });
+    }
+    function renderMap(items) {
+      const container = byId("map"); container.replaceChildren();
+      if (!items.length) return empty(container, "Survey routes have not mapped this world yet");
+      const max = Math.max(...items.map((item) => item.count), 1);
+      items.forEach((item) => {
+        const row = make("div", "bar");
+        row.append(make("label", "", item.kind));
+        const track = make("div", "track");
+        const fill = make("div", "fill");
+        fill.style.width = `${Math.max(5, item.count / max * 100)}%`;
+        track.append(fill);
+        row.append(track, make("output", "", item.count));
+        container.append(row);
+      });
+    }
+    function renderRoles(roles, ownerUsername) {
+      const container = byId("roles"); container.replaceChildren();
+      addRow(container, ownerUsername || "Configured owner", "full control · implicit", "owner");
+      roles.forEach((role) => addRow(container, role.username, `granted by ${role.grantedBy} · ${timeAgo(role.tsUpdated)}`, role.role));
+    }
+    const overhead = {
+      data: null,
+      status: null,
+      centerX: 0,
+      centerZ: 0,
+      scale: 4,
+      showSurveys: localStorage.getItem("smartbot.map.surveys") !== "false",
+      fittedKey: "",
+      dragging: false,
+      dragX: 0,
+      dragY: 0,
+      dragCenterX: 0,
+      dragCenterZ: 0
+    };
+    const observationColors = {
+      resource: "#77a7ff", hazard: "#ff6b6b", container: "#55e6c1",
+      infrastructure: "#ffc857", landmark: "#eef6f0"
+    };
+    function terrainColor(name) {
+      const block = String(name || "");
+      if (block.includes("water") || block === "bubble_column") return "#438fd1";
+      if (block.includes("lava") || block.includes("fire")) return "#e66b32";
+      if (block.includes("grass") || block.includes("moss") || block.includes("leaves") ||
+          block.includes("vine") || block.includes("fern") || block.includes("azalea")) return "#58a84c";
+      if (block.includes("sand") || block.includes("sandstone")) return "#dac47a";
+      if (block.includes("snow")) return "#f7fafb";
+      if (block.includes("ice")) return "#9ed8e6";
+      if (block.includes("dirt") || block.includes("mud") || block.includes("podzol") || block.includes("mycelium")) return "#8b684b";
+      if (block.includes("log") || block.includes("wood") || block.includes("plank") || block.includes("stem")) return "#8a6740";
+      if (block.includes("netherrack") || block.includes("nether_wart")) return "#9b4d48";
+      if (block.includes("end_stone")) return "#d6d69a";
+      if (block.includes("deepslate")) return "#525a57";
+      if (block.includes("stone") || block.includes("ore") || block.includes("gravel")) return "#8b948d";
+      if (block.includes("clay")) return "#9da9ad";
+      return "#9da59f";
+    }
+    function mapSize() {
+      const canvas = byId("worldMap");
+      const rect = canvas.getBoundingClientRect();
+      const ratio = window.devicePixelRatio || 1;
+      const width = Math.max(1, Math.round(rect.width));
+      const height = Math.max(1, Math.round(rect.height));
+      if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
+        canvas.width = Math.round(width * ratio);
+        canvas.height = Math.round(height * ratio);
+      }
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      return { canvas, ctx, width, height };
+    }
+    const toScreen = (x, z, width, height) => ({
+      x: (x - overhead.centerX) * overhead.scale + width / 2,
+      y: (z - overhead.centerZ) * overhead.scale + height / 2
+    });
+    const toWorld = (x, y, width, height) => ({
+      x: (x - width / 2) / overhead.scale + overhead.centerX,
+      z: (y - height / 2) / overhead.scale + overhead.centerZ
+    });
+    function mapBounds() {
+      const data = overhead.data;
+      if (!data) return null;
+      const points = [];
+      data.cells.forEach((cell) => {
+        points.push([cell.cellX * data.cellSize, cell.cellZ * data.cellSize]);
+        points.push([(cell.cellX + 1) * data.cellSize, (cell.cellZ + 1) * data.cellSize]);
+      });
+      data.trail.forEach((point) => points.push([point.x, point.z]));
+      data.observations.forEach((point) => points.push([point.x, point.z]));
+      data.terrain.forEach((point) => points.push([point.x, point.z]));
+      data.surveys.forEach((survey) => {
+        points.push([survey.x - survey.radius, survey.z - survey.radius]);
+        points.push([survey.x + survey.radius, survey.z + survey.radius]);
+      });
+      const live = overhead.status?.live;
+      if (overhead.status?.serverKey === data.serverKey && live?.dimension === data.dimension && live.position) {
+        points.push([live.position.x, live.position.z]);
+      }
+      if (!points.length) return null;
+      return {
+        minX: Math.min(...points.map((point) => point[0])),
+        maxX: Math.max(...points.map((point) => point[0])),
+        minZ: Math.min(...points.map((point) => point[1])),
+        maxZ: Math.max(...points.map((point) => point[1]))
+      };
+    }
+    function fitOverheadMap() {
+      const { width, height } = mapSize();
+      const bounds = mapBounds();
+      if (!bounds) {
+        const live = overhead.status?.live?.position;
+        overhead.centerX = live?.x || 0;
+        overhead.centerZ = live?.z || 0;
+        overhead.scale = 4;
+      } else {
+        overhead.centerX = (bounds.minX + bounds.maxX) / 2;
+        overhead.centerZ = (bounds.minZ + bounds.maxZ) / 2;
+        const spanX = Math.max(16, bounds.maxX - bounds.minX);
+        const spanZ = Math.max(16, bounds.maxZ - bounds.minZ);
+        overhead.scale = Math.max(.04, Math.min(12, (width - 72) / spanX, (height - 72) / spanZ));
+      }
+      drawOverheadMap();
+    }
+    function drawGrid(ctx, width, height) {
+      let step = 16;
+      while (step * overhead.scale < 62) step *= 2;
+      const topLeft = toWorld(0, 0, width, height);
+      const bottomRight = toWorld(width, height, width, height);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "rgba(72,91,78,.14)";
+      ctx.fillStyle = "rgba(52,70,58,.62)";
+      ctx.font = "10px ui-monospace, monospace";
+      ctx.beginPath();
+      for (let x = Math.floor(topLeft.x / step) * step; x <= bottomRight.x; x += step) {
+        const point = toScreen(x, 0, width, height);
+        ctx.moveTo(Math.round(point.x) + .5, 0); ctx.lineTo(Math.round(point.x) + .5, height);
+        ctx.fillText(String(x), point.x + 4, 13);
+      }
+      for (let z = Math.floor(topLeft.z / step) * step; z <= bottomRight.z; z += step) {
+        const point = toScreen(0, z, width, height);
+        ctx.moveTo(0, Math.round(point.y) + .5); ctx.lineTo(width, Math.round(point.y) + .5);
+        ctx.fillText(String(z), 5, point.y - 4);
+      }
+      ctx.stroke();
+    }
+    function drawOverheadMap() {
+      const { ctx, width, height } = mapSize();
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = "#edf2ec"; ctx.fillRect(0, 0, width, height);
+      drawGrid(ctx, width, height);
+      const data = overhead.data;
+      if (!data) return;
+      data.terrain.forEach((sample) => {
+        const point = toScreen(sample.x, sample.z, width, height);
+        const size = Math.max(1.2, data.terrainSampleSize * overhead.scale + .35);
+        ctx.fillStyle = terrainColor(sample.blockName);
+        ctx.fillRect(point.x, point.y, size, size);
+      });
+      data.cells.forEach((cell) => {
+        const point = toScreen(cell.cellX * data.cellSize, cell.cellZ * data.cellSize, width, height);
+        const size = Math.max(1.5, data.cellSize * overhead.scale);
+        ctx.fillStyle = `rgba(39,168,160,${Math.min(.18, .025 + Math.log2(cell.visits + 1) * .022)})`;
+        ctx.fillRect(point.x, point.y, size, size);
+        if (size > 5) {
+          ctx.strokeStyle = "rgba(18,125,120,.3)"; ctx.lineWidth = 1;
+          ctx.strokeRect(point.x + .5, point.y + .5, size - 1, size - 1);
+        }
+      });
+      if (overhead.showSurveys) data.surveys.forEach((survey) => {
+        const point = toScreen(survey.x, survey.z, width, height);
+        ctx.beginPath(); ctx.arc(point.x, point.y, Math.max(3, survey.radius * overhead.scale), 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,200,87,.06)"; ctx.fill();
+        ctx.strokeStyle = "rgba(207,137,18,.82)"; ctx.lineWidth = 1.5; ctx.stroke();
+        if (survey.radius * overhead.scale > 25) {
+          ctx.fillStyle = "#9d6509"; ctx.font = "10px ui-monospace, monospace";
+          ctx.fillText(survey.label, point.x + 5, point.y - 6);
+        }
+      });
+      if (data.trail.length > 1) {
+        ctx.beginPath();
+        data.trail.forEach((point, index) => {
+          const screen = toScreen(point.x, point.z, width, height);
+          if (index === 0) ctx.moveTo(screen.x, screen.y); else ctx.lineTo(screen.x, screen.y);
+        });
+        ctx.strokeStyle = "rgba(55,105,35,.88)"; ctx.lineWidth = 2; ctx.lineJoin = "round"; ctx.stroke();
+      }
+      data.observations.forEach((observation) => {
+        const point = toScreen(observation.x, observation.z, width, height);
+        ctx.beginPath(); ctx.arc(point.x, point.y, 3.2, 0, Math.PI * 2);
+        ctx.fillStyle = observationColors[observation.kind] || "#eef6f0"; ctx.fill();
+      });
+      const live = overhead.status?.live;
+      if (overhead.status?.serverKey === data.serverKey && live?.dimension === data.dimension && live.position) {
+        const point = toScreen(live.position.x, live.position.z, width, height);
+        ctx.beginPath(); ctx.arc(point.x, point.y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff"; ctx.fill();
+        ctx.strokeStyle = "#18221b"; ctx.lineWidth = 2; ctx.stroke();
+      }
+      if (!data.terrain.length && !data.cells.length && !data.surveys.length && !data.observations.length) {
+        ctx.fillStyle = "#68756c"; ctx.font = "13px ui-monospace, monospace"; ctx.textAlign = "center";
+        ctx.fillText("No travel or survey history for this world yet", width / 2, height / 2);
+        ctx.textAlign = "start";
+      }
+    }
+    function populateMapSelectors(data) {
+      const server = byId("mapServer");
+      const knownServers = data.servers.map((entry) => entry.serverKey);
+      server.replaceChildren(...knownServers.map((key) => {
+        const option = make("option", "", key === overhead.status?.serverKey ? overhead.status.serverLabel : key);
+        option.value = key; option.selected = key === data.serverKey; return option;
+      }));
+      const dimension = byId("mapDimension");
+      dimension.replaceChildren(...data.dimensions.map((name) => {
+        const option = make("option", "", name); option.value = name;
+        option.selected = name === data.dimension; return option;
+      }));
+    }
+    async function loadOverheadMap(fit = false, omitDimension = false) {
+      const serverKey = byId("mapServer").value || overhead.status?.serverKey || "legacy";
+      const dimension = omitDimension ? "" : byId("mapDimension").value;
+      const query = new URLSearchParams({ server: serverKey });
+      if (dimension) query.set("dimension", dimension);
+      const response = await fetch(`/api/map?${query}`, { cache: "no-store" });
+      if (!response.ok) throw new Error("map unavailable");
+      const data = await response.json();
+      overhead.data = data;
+      populateMapSelectors(data);
+      const key = `${data.serverKey}/${data.dimension}`;
+      if (fit || overhead.fittedKey !== key) {
+        overhead.fittedKey = key;
+        fitOverheadMap();
+      } else drawOverheadMap();
+    }
+    function zoomOverhead(factor, anchorX, anchorY) {
+      const { width, height } = mapSize();
+      const before = toWorld(anchorX ?? width / 2, anchorY ?? height / 2, width, height);
+      overhead.scale = Math.max(.02, Math.min(24, overhead.scale * factor));
+      const after = toWorld(anchorX ?? width / 2, anchorY ?? height / 2, width, height);
+      overhead.centerX += before.x - after.x;
+      overhead.centerZ += before.z - after.z;
+      drawOverheadMap();
+    }
+    async function load() {
+      const button = byId("refresh");
+      button.disabled = true;
+      try {
+        const response = await fetch("/api/status", { cache: "no-store" });
+        if (!response.ok) throw new Error("snapshot unavailable");
+        const data = await response.json();
+        overhead.status = data;
+        const offline = String(data.connection).startsWith("disconnected") || data.connection === "connecting";
+        byId("connection").classList.toggle("offline", offline);
+        byId("connectionText").textContent = data.connection;
+        byId("goalTitle").textContent = data.goal?.text || "No active goal";
+        byId("goalMeta").textContent = data.goal ? `Goal #${data.goal.id} · set ${timeAgo(data.goal.ts)}` : "SmartBot is standing by for its next assignment.";
+        renderMetrics(data.metrics);
+        renderLive(data);
+        renderRows(data);
+        renderEvents(data.events);
+        renderMap(data.mapSummary);
+        renderRoles(data.roles, data.ownerUsername);
+        await loadOverheadMap(false);
+        byId("updated").textContent = `Snapshot updated ${new Date(data.generatedAt).toLocaleTimeString()} · auto refresh every 5s`;
+      } catch (error) {
+        byId("connection").classList.add("offline");
+        byId("connectionText").textContent = "dashboard data unavailable";
+        byId("updated").textContent = "Could not refresh snapshot";
+      } finally {
+        button.disabled = false;
+      }
+    }
+    byId("mapServer").addEventListener("change", () => loadOverheadMap(true, true));
+    byId("mapDimension").addEventListener("change", () => loadOverheadMap(true));
+    byId("mapFit").addEventListener("click", fitOverheadMap);
+    const surveyToggle = byId("mapSurveys");
+    const syncSurveyToggle = () => {
+      surveyToggle.classList.toggle("active", overhead.showSurveys);
+      surveyToggle.setAttribute("aria-pressed", String(overhead.showSurveys));
+      surveyToggle.textContent = `Surveys: ${overhead.showSurveys ? "on" : "off"}`;
+    };
+    syncSurveyToggle();
+    surveyToggle.addEventListener("click", () => {
+      overhead.showSurveys = !overhead.showSurveys;
+      localStorage.setItem("smartbot.map.surveys", String(overhead.showSurveys));
+      syncSurveyToggle();
+      drawOverheadMap();
+    });
+    byId("mapZoomIn").addEventListener("click", () => zoomOverhead(1.35));
+    byId("mapZoomOut").addEventListener("click", () => zoomOverhead(1 / 1.35));
+    const mapCanvas = byId("worldMap");
+    mapCanvas.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      const rect = mapCanvas.getBoundingClientRect();
+      zoomOverhead(event.deltaY < 0 ? 1.18 : 1 / 1.18, event.clientX - rect.left, event.clientY - rect.top);
+    }, { passive: false });
+    mapCanvas.addEventListener("pointerdown", (event) => {
+      overhead.dragging = true; overhead.dragX = event.clientX; overhead.dragY = event.clientY;
+      overhead.dragCenterX = overhead.centerX; overhead.dragCenterZ = overhead.centerZ;
+      mapCanvas.classList.add("dragging"); mapCanvas.setPointerCapture(event.pointerId);
+    });
+    mapCanvas.addEventListener("pointermove", (event) => {
+      const rect = mapCanvas.getBoundingClientRect();
+      const world = toWorld(event.clientX - rect.left, event.clientY - rect.top, rect.width, rect.height);
+      byId("mapReadout").textContent = `x ${world.x.toFixed(1)} · z ${world.z.toFixed(1)} · ${overhead.data?.dimension || "unknown"}`;
+      if (!overhead.dragging) return;
+      overhead.centerX = overhead.dragCenterX - (event.clientX - overhead.dragX) / overhead.scale;
+      overhead.centerZ = overhead.dragCenterZ - (event.clientY - overhead.dragY) / overhead.scale;
+      drawOverheadMap();
+    });
+    const endMapDrag = (event) => {
+      overhead.dragging = false; mapCanvas.classList.remove("dragging");
+      if (mapCanvas.hasPointerCapture(event.pointerId)) mapCanvas.releasePointerCapture(event.pointerId);
+    };
+    mapCanvas.addEventListener("pointerup", endMapDrag);
+    mapCanvas.addEventListener("pointercancel", endMapDrag);
+    window.addEventListener("resize", drawOverheadMap);
+    byId("refresh").addEventListener("click", load);
+    load();
+    setInterval(load, 5000);
+  </script>
+</body>
+</html>

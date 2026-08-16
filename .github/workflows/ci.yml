@@ -14,19 +14,62 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
         with:
           node-version: 24.18.0
-      - name: Install dependencies
-        run: npm install
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
+
       - name: Type-check
         run: npm run typecheck
+
       - name: Test
         run: npm test
+
       - name: Build
         run: npm run build
+
       - name: Build headless archive
         run: node scripts/buildHeadlessRelease.mjs
+
+      - name: Verify exact release archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$(find release -maxdepth 1 -name 'mcsmartbot-v*-headless.tar.gz' -print -quit)"
+          test -n "$archive"
+          test -f "$archive.sha256"
+          (
+            cd release
+            sha256sum -c "$(basename "$archive.sha256")"
+          )
+          verify_dir="$(mktemp -d)"
+          tar -xzf "$archive" -C "$verify_dir"
+          package_dir="$(find "$verify_dir" -mindepth 1 -maxdepth 1 -type d -name 'mcsmartbot-v*-headless' -print -quit)"
+          test -n "$package_dir"
+          cd "$package_dir"
+          test -f package-lock.json
+          npm ci --omit=dev
+          node --check dist/index.js
+          grep -q '^DASHBOARD_ENABLED=false$' .env.example
+          test ! -d dist/desktop
+          test ! -d dist/skills/combat
+
+      - name: Upload headless release candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcsmartbot-headless-${{ github.sha }}
+          path: |
+            release/*.tar.gz
+            release/*.sha256
+          if-no-files-found: error
+          retention-days: 7

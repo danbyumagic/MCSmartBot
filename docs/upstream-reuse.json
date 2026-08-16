@@ -77,11 +77,10 @@
         "src/tools/social.ts"
       ],
       "adaptedPaths": [
-        "src/skills/combat/attackMob.ts",
         "src/skills/interaction/openVillager.ts",
         "src/skills/interaction/tradeVillager.ts"
       ],
-      "notes": "The bounded attack and villager Mineflayer action bodies adapt the approved interaction/social sources. Stable selectors, authorization, cancellation, verification, and focused tests are SmartBotMC-authored. Every listed adaptation retains an MIT modification notice."
+      "notes": "The shipped villager Mineflayer action bodies adapt the approved interaction/social sources. Stable selectors, authorization, cancellation, verification, and focused tests are SmartBotMC-authored. Every listed public v0.1 adaptation retains an MIT modification notice."
     },
     {
       "name": "yuniko-minecraft-mcp",

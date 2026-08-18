@@ -258,3 +258,94 @@ export function createSkillRunner(deps: SkillRunnerDeps): SkillRunner {
             errorCode: result.code,
             recoverable: result.recoverable,
             details: result.details,
+          });
+        }
+        log.info(
+          { ok: result.ok, summary: result.summary },
+          result.ok ? "RESULT skill completed" : "RESULT skill failed",
+        );
+
+        // Emit bus trigger on completion (not on cancellation)
+        if (deps.bus && options.emitTrigger !== false && (!controller.signal.aborted || timedOut)) {
+          if (result.ok) {
+            deps.bus.emit("agent.trigger", { kind: "skillDone", skill: skill.name, ok: true, summary: result.summary });
+          } else {
+            deps.bus.emit("agent.trigger", {
+              kind: "skillFailed",
+              skill: skill.name,
+              error: result.summary,
+              code: result.code ?? "UNKNOWN",
+              recoverable: result.recoverable ?? false,
+              details: result.details,
+            });
+          }
+        }
+
+        return result;
+      } catch (err) {
+        const errMsg = (err as Error).message ?? String(err);
+        if (!manuallyCancelled && hasExpiredDeadline(execution)) timedOut = true;
+        const result = timedOut
+          ? deadlineExceededResult(skill.name, execution, { message: errMsg })
+          : {
+              ok: false,
+              summary: `${skill.name} threw: ${errMsg}`,
+              code: controller.signal.aborted ? "INTERRUPTED" : "UNKNOWN",
+              recoverable: !controller.signal.aborted,
+              details: { message: errMsg },
+            } as SkillResult;
+        if (deps.db && runId !== null) {
+          finishSkillRun(deps.db, runId, {
+            status: timedOut ? "failed" : controller.signal.aborted ? "cancelled" : "failed",
+            summary: result.summary,
+            errorCode: result.code,
+            recoverable: result.recoverable,
+            details: result.details,
+          });
+        }
+        log.error({ err }, "skill threw");
+
+        // Emit skillFailed trigger on exception (not on cancellation)
+        if (deps.bus && options.emitTrigger !== false && (!controller.signal.aborted || timedOut)) {
+          deps.bus.emit("agent.trigger", {
+            kind: "skillFailed",
+            skill: skill.name,
+            error: result.summary,
+            code: result.code ?? "UNKNOWN",
+            recoverable: result.recoverable ?? false,
+            details: result.details,
+          });
+        }
+        return result;
+      } finally {
+        clearDeadlineTimer();
+        // Only clear `active` if this run is still the active one. A concurrent cancel()
+        // would have already set it to null and started something new.
+        if (active?.controller === controller) active = null;
+      }
+    };
+
+    if (skill.longRunning && !options.waitForCompletion) {
+      // Fire-and-forget: return an acknowledgement immediately so the MCP tool handler
+      // doesn't block the Claude session while the skill runs indefinitely.
+      void completeRun();
+      return { ok: true, summary: `${skill.name} started` };
+    }
+
+    return completeRun();
+  }
+
+  function restart(): void {
+    if (!lastFired) return;
+    // Fire-and-forget — `run()` itself handles the cancel-prior-run logic if anything is active.
+    void run(lastFired.skill, lastFired.rawParams, { execution: lastFired.execution });
+  }
+
+  return {
+    run,
+    cancel,
+    restart,
+    activeName: () => active?.name ?? null,
+    shouldRestartActive: () => active?.restartAfterPreempt ?? false,
+  };
+}

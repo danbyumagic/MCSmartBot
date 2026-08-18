@@ -258,3 +258,136 @@ export function createAgentSession(deps: AgentSessionDeps): AgentSession {
     if (deps.actorContext) {
       deps.actorContext.username = actorUsername;
       deps.actorContext.role = role;
+      deps.actorContext.source = actorSource;
+    }
+    if (deps.triggerSource) {
+      deps.triggerSource.current = sourceFromTrigger(trigger);
+    }
+    const recent = getRecentConversations(db, 10);
+    const triggerLine = (() => {
+      switch (trigger.kind) {
+        case "chat":
+          return `${trigger.from} (in-game role=${role}): ${trigger.text}`;
+        case "cli":
+          return `${ownerUsername} (${trigger.executionSource ?? "cli"}): ${trigger.text}`;
+        case "skillDone":
+          return `Observation: skill ${trigger.skill} finished (ok=${trigger.ok}). ${trigger.summary}`;
+        case "skillFailed":
+          return `Observation: skill ${trigger.skill} FAILED (code=${trigger.code}, recoverable=${trigger.recoverable}). ${trigger.error}`;
+        case "reflexAlert":
+          return `Observation (reflex): ${trigger.summary}`;
+        case "taskPlanDone":
+          return `Observation: task plan ${trigger.planId} '${trigger.title}' completed.`;
+        case "taskPlanFailed":
+          return `Observation: task plan ${trigger.planId} '${trigger.title}' FAILED. ${trigger.error}`;
+        case "botDeath":
+          return "Observation: the bot died. Active movement was interrupted and will resume after respawn.";
+        case "botRespawn":
+          return "Observation: the bot respawned and durable work is available to resume.";
+        case "idleTick":
+          return "Observation: idle tick. Check the open goal in memory and decide whether to act, or stay quiet.";
+      }
+    })();
+    let runtimeContext: string | undefined;
+    try {
+      runtimeContext = deps.runtimeContext?.();
+    } catch (err) {
+      log.warn({ err }, "failed to collect live bot context");
+    }
+    const userMessage = [
+      formatRecentConversations(recent),
+      "",
+      ...(runtimeContext ? [`Current live bot state: ${runtimeContext}`, ""] : []),
+      triggerLine,
+    ].join("\n");
+
+    const startedAt = Date.now();
+    const controller = new AbortController();
+    activeController = controller;
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, agentTurnTimeoutMs);
+    if (trigger.kind === "chat" || trigger.kind === "cli") {
+      log.info(
+        {
+          source: actorSource,
+          requester: actorUsername,
+          goal: summarizeGoal(trigger.text),
+        },
+        "GOAL received",
+      );
+    } else if (trigger.kind === "skillDone") {
+      log.info(
+        { skill: trigger.skill, ok: true, summary: summarizeGoal(trigger.summary) },
+        "RESULT observed",
+      );
+    } else if (trigger.kind === "skillFailed") {
+      log.warn(
+        {
+          skill: trigger.skill,
+          ok: false,
+          code: trigger.code,
+          recoverable: trigger.recoverable,
+          summary: summarizeGoal(trigger.error),
+        },
+        "RESULT observed",
+      );
+    } else if (trigger.kind === "taskPlanDone") {
+      log.info(
+        { planId: trigger.planId, title: summarizeGoal(trigger.title) },
+        "DONE task plan completed",
+      );
+    } else if (trigger.kind === "taskPlanFailed") {
+      log.warn(
+        {
+          planId: trigger.planId,
+          title: summarizeGoal(trigger.title),
+          summary: summarizeGoal(trigger.error),
+        },
+        "RESULT task plan failed",
+      );
+    }
+    log.info({ triggerKind: trigger.kind }, "agent turn started");
+    try {
+      for await (const part of client.sendMessage(userMessage, {
+        system,
+        signal: controller.signal,
+      })) {
+        if (part.kind === "text") {
+          log.debug({ text: part.text }, "agent text");
+        } else if (part.kind === "toolUse") {
+          // Tools are executed by the SDK via the MCP server registered in
+          // buildRealClientStream. The session loop only logs the call here.
+          // (Tests inject a fake client whose async generator may directly invoke
+          //  tool handlers to simulate MCP execution.)
+          log.info(
+            { tool: part.name, input: summarizeForLog(part.input) },
+            "TOOL selected",
+          );
+        }
+      }
+      if (timedOut) {
+        throw new Error(`agent turn timed out after ${agentTurnTimeoutMs}ms`);
+      }
+      log.info({ durationMs: Date.now() - startedAt }, "agent turn completed");
+    } finally {
+      clearTimeout(timeout);
+      if (activeController === controller) activeController = null;
+    }
+  }
+
+  return {
+    handleTrigger,
+    cancelCurrent: () => {
+      if (!activeController) return false;
+      activeController.abort();
+      return true;
+    },
+    close: () => {
+      activeController?.abort();
+      client.close?.();
+    },
+  };
+}

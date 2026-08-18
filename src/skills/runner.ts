@@ -8,6 +8,7 @@ import {
   snapshotSkillExecutionContext,
   type SkillExecutionContext,
 } from "../permissions/executionActor.js";
+import { summarizeForLog } from "../agent/observability.js";
 
 export interface SkillRunnerDeps {
   bot: Bot;
@@ -211,7 +212,7 @@ export function createSkillRunner(deps: SkillRunnerDeps): SkillRunner {
       );
     }
     const log = deps.log.child({ skill: skill.name });
-    log.info("skill started");
+    log.info({ input: summarizeForLog(parsed.data) }, "RUN skill started");
 
     const runId = deps.db ? startSkillRun(deps.db, { skill: skill.name, params: parsed.data as Record<string, unknown> }) : null;
 
@@ -259,7 +260,10 @@ export function createSkillRunner(deps: SkillRunnerDeps): SkillRunner {
             details: result.details,
           });
         }
-        log.info({ ok: result.ok, summary: result.summary }, "skill finished");
+        log.info(
+          { ok: result.ok, summary: result.summary },
+          result.ok ? "RESULT skill completed" : "RESULT skill failed",
+        );
 
         // Emit bus trigger on completion (not on cancellation)
         if (deps.bus && options.emitTrigger !== false && (!controller.signal.aborted || timedOut)) {

@@ -18,6 +18,7 @@ import {
 } from "./client.js";
 import { createCodexClient } from "./codexClient.js";
 import { createOpenRouterClient } from "./openrouterClient.js";
+import { summarizeForLog, summarizeGoal } from "./observability.js";
 
 /**
  * Internal event shape yielded by SdkClient.sendMessage().
@@ -308,6 +309,46 @@ export function createAgentSession(deps: AgentSessionDeps): AgentSession {
       timedOut = true;
       controller.abort();
     }, agentTurnTimeoutMs);
+    if (trigger.kind === "chat" || trigger.kind === "cli") {
+      log.info(
+        {
+          source: actorSource,
+          requester: actorUsername,
+          goal: summarizeGoal(trigger.text),
+        },
+        "GOAL received",
+      );
+    } else if (trigger.kind === "skillDone") {
+      log.info(
+        { skill: trigger.skill, ok: true, summary: summarizeGoal(trigger.summary) },
+        "RESULT observed",
+      );
+    } else if (trigger.kind === "skillFailed") {
+      log.warn(
+        {
+          skill: trigger.skill,
+          ok: false,
+          code: trigger.code,
+          recoverable: trigger.recoverable,
+          summary: summarizeGoal(trigger.error),
+        },
+        "RESULT observed",
+      );
+    } else if (trigger.kind === "taskPlanDone") {
+      log.info(
+        { planId: trigger.planId, title: summarizeGoal(trigger.title) },
+        "DONE task plan completed",
+      );
+    } else if (trigger.kind === "taskPlanFailed") {
+      log.warn(
+        {
+          planId: trigger.planId,
+          title: summarizeGoal(trigger.title),
+          summary: summarizeGoal(trigger.error),
+        },
+        "RESULT task plan failed",
+      );
+    }
     log.info({ triggerKind: trigger.kind }, "agent turn started");
     try {
       for await (const part of client.sendMessage(userMessage, {
@@ -321,7 +362,10 @@ export function createAgentSession(deps: AgentSessionDeps): AgentSession {
           // buildRealClientStream. The session loop only logs the call here.
           // (Tests inject a fake client whose async generator may directly invoke
           //  tool handlers to simulate MCP execution.)
-          log.info({ tool: part.name }, "agent tool call observed");
+          log.info(
+            { tool: part.name, input: summarizeForLog(part.input) },
+            "TOOL selected",
+          );
         }
       }
       if (timedOut) {
